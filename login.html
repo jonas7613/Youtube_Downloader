@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign In</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+        --background-color: #0a0a0a;
+        --text-color: #ffffff;
+        --primary-accent: #ffffff;
+        --primary-accent-text: #000000;
+        --container-bg: rgba(255, 255, 255, 0.03);
+        --container-border: rgba(255, 255, 255, 0.08);
+        --interactive-bg: rgba(255, 255, 255, 0.05);
+        --interactive-border: rgba(255, 255, 255, 0.12);
+        --interactive-hover-bg: rgba(255, 255, 255, 0.1);
+        --interactive-hover-border: rgba(255, 255, 255, 0.25);
+        --animation-curve-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --animation-curve-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: var(--background-color);
+      color: var(--text-color);
+    }
+
+    .bg-gradient {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: radial-gradient(circle at 30% 20%, rgba(120, 119, 198, 0.15) 0%, transparent 40%),
+                  radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.07) 0%, transparent 50%);
+      z-index: 1;
+      animation: subtleBreathe 10s ease-in-out infinite alternate;
+    }
+    @keyframes subtleBreathe {
+      from { transform: scale(1); opacity: 0.8; }
+      to { transform: scale(1.05); opacity: 1; }
+    }
+
+    .splash {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: var(--background-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.8s var(--animation-curve-smooth);
+    }
+    .splash.fade-out { opacity: 0; pointer-events: none; }
+    .splash .logo {
+      font-size: 24px; font-weight: 600;
+      color: white; display: flex;
+      align-items: center; gap: 12px;
+      opacity: 0;
+      transform: scale(0.9);
+      animation: fadeInScale 1s ease 0.5s forwards, logoGlow 2.5s ease-in-out infinite alternate;
+    }
+    .splash .logo::after {
+      content: ''; width: 20px; height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%; margin-left: 12px;
+      animation: spin 1.2s linear infinite, fadeOutLoader 0.4s ease 2.2s forwards;
+    }
+    @keyframes fadeInScale { to { opacity: 1; transform: scale(1); } }
+    @keyframes logoGlow {
+        from { text-shadow: 0 0 8px rgba(255, 255, 255, 0.2), 0 0 20px rgba(120, 119, 198, 0.2); }
+        to { text-shadow: 0 0 16px rgba(255, 255, 255, 0.5), 0 0 30px rgba(120, 119, 198, 0.4); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeOutLoader { to { opacity: 0; transform: scale(0.5); } }
+    
+    .main-wrapper {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; z-index: 10;
+      padding: 20px;
+    }
+
+    .login-container {
+      width: 100%; max-width: 400px;
+      background: var(--container-bg);
+      border: 1px solid var(--container-border);
+      padding: 48px 32px; border-radius: 16px;
+      backdrop-filter: blur(20px);
+      opacity: 0; transform: translateY(40px);
+      animation: slideUpFadeIn 1s var(--animation-curve-bounce) 2.6s forwards;
+    }
+    @keyframes slideUpFadeIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .login-container h1 {
+      text-align: center; font-size: 24px; font-weight: 600;
+      margin-bottom: 32px; color: #ffffff;
+      opacity: 0; transform: translateY(20px);
+      animation: slideInStagger 0.7s var(--animation-curve-bounce) 2.8s forwards, titleGlow 3s ease-in-out infinite alternate;
+    }
+    @keyframes titleGlow {
+        from { text-shadow: 0 0 8px rgba(255, 255, 255, 0.2); }
+        to { text-shadow: 0 0 16px rgba(255, 255, 255, 0.4); }
+    }
+
+    .form-group {
+      margin-bottom: 20px; opacity: 0; transform: translateX(-30px);
+      animation: slideInStagger 0.5s var(--animation-curve-bounce) forwards;
+    }
+    .form-group:nth-of-type(1) { animation-delay: 3s; }
+    .form-group:nth-of-type(2) { animation-delay: 3.1s; }
+    
+    @keyframes slideInStagger { to { opacity: 1; transform: translateX(0); } }
+
+    .form-group input {
+      width: 100%; padding: 16px; font-size: 15px;
+      border: 1px solid var(--interactive-border);
+      border-radius: 8px; background: var(--interactive-bg);
+      color: #ffffff; outline: none; transition: all 0.3s var(--animation-curve-smooth);
+      font-family: inherit;
+    }
+    .form-group input::placeholder { color: rgba(255, 255, 255, 0.5); }
+    .form-group input:focus {
+      border-color: var(--interactive-hover-border);
+      background: var(--interactive-hover-bg);
+      box-shadow: 0 0 15px rgba(120, 119, 198, 0.2);
+    }
+    
+    .action-btn {
+      width: 100%; padding: 16px; font-weight: 600; font-size: 15px;
+      border: none; border-radius: 8px; cursor: pointer;
+      transition: all 0.2s var(--animation-curve-smooth); margin-bottom: 12px;
+      font-family: inherit; text-decoration: none; display: block; text-align: center;
+      opacity: 0; transform: translateY(20px);
+      animation: slideInStagger 0.5s var(--animation-curve-bounce) forwards;
+    }
+    .action-btn.primary-btn { animation-delay: 3.3s; }
+    .action-btn.secondary-btn { animation-delay: 3.4s; }
+    .guest-btn { animation-delay: 3.6s; }
+
+    .action-btn:active:not(:disabled) { transform: translateY(2px) scale(0.98); }
+
+    .primary-btn { background: var(--primary-accent); color: var(--primary-accent-text); }
+    .primary-btn:hover:not(:disabled) {
+      background: #f0f0f0; 
+      transform: translateY(-3px);
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.3), 0 8px 20px rgba(0,0,0,0.2);
+    }
+    
+    .secondary-btn { background: transparent; border: 1px solid var(--interactive-border); color: var(--text-color); }
+    .secondary-btn:hover:not(:disabled) {
+      background: var(--interactive-hover-bg);
+      border-color: var(--interactive-hover-border);
+      transform: translateY(-3px);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    }
+
+    hr {
+      border: none; border-top: 1px solid var(--interactive-border);
+      margin: 24px 0; opacity: 0; transform: scaleX(0);
+      animation: expandHr 0.6s ease 3.5s forwards;
+    }
+    @keyframes expandHr { to { opacity: 1; transform: scaleX(1); } }
+    
+    .error-message {
+      text-align: center; min-height: 20px; font-weight: 500;
+      margin-top: 16px; font-size: 14px;
+      transition: all 0.3s ease;
+      opacity: 0; transform: translateY(10px);
+    }
+    .error-message.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .loading { opacity: 0.7; pointer-events: none; }
+
+  </style>
+</head>
+<body>
+  <div class="splash" id="splash">
+    <div class="logo"><span></span></div>
+  </div>
+
+  <div class="bg-gradient"></div>
+
+  <div class="main-wrapper">
+      <div class="login-container">
+        <h1>Login</h1>
+        <form onsubmit="signIn(event); return false;">
+            <div class="form-group"><input id="username" type="text" placeholder="Username" required /></div>
+            <div class="form-group"><input id="password" type="password" placeholder="Password" required /></div>
+            <button type="submit" class="action-btn primary-btn">Sign In</button>
+            <button type="button" class="action-btn secondary-btn" onclick="signUp(event)">Sign Up</button>
+        </form>
+        <hr/>
+      
+        <p id="message" class="error-message"></p>
+      </div>
+  </div>
+
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => { document.getElementById('splash').classList.add('fade-out'); }, 2500);
+    });
+    
+    const messageEl = document.getElementById("message");
+
+    function showMessage(text, type) {
+      messageEl.innerText = text;
+      messageEl.style.color = type === "success" ? "#4ade80" : "#f87171";
+      if (text) {
+        messageEl.classList.add('visible');
+      } else {
+        messageEl.classList.remove('visible');
+      }
+    }
+
+  function handleFetch(button, url, body) {
+        if (!button) return;
+        
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+        
+        if (!username || !password) {
+            showMessage("Please fill in all fields.", "error");
+            return;
+        }
+
+        showMessage('', 'none');
+        button.classList.add('loading');
+        button.disabled = true;
+
+    fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "success") {
+        if(url === "/api/login") {
+                    showMessage("Login successful!", "success");
+          setTimeout(() => window.location.href = "/", 500);
+                } else {
+                     showMessage("User registered. You can now sign in.", "success");
+                }
+            } else {
+                showMessage(data.message || "An error occurred.", "error");
+            }
+        })
+        .catch(() => {
+            showMessage("Connection error. Please try again.", "error");
+        })
+        .finally(() => {
+            button.classList.remove('loading');
+            button.disabled = false;
+        });
+    }
+
+    function signIn(event) {
+        event.preventDefault();
+        const button = document.querySelector('.primary-btn');
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+    handleFetch(button, "/api/login", { username, password });
+    }
+
+    function signUp(event) {
+        const button = event.currentTarget;
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+    handleFetch(button, "/api/register", { username, password });
+    }
+
+    document.getElementById('password').addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            signIn(event);
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+      document.getElementById('username').value = '';
+      document.getElementById('password').value = '';
+      showMessage('', 'success');
+        }
+    });
+
+    fetch('/api/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.isAuthenticated) {
+          window.location.href = '/';
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

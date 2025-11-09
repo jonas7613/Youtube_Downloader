@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Downloads</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --background-color: #0a0a0a;
+      --text-color: #ffffff;
+      --text-color-secondary: rgba(255, 255, 255, 0.7);
+      --primary-accent: #ffffff;
+      --container-bg: rgba(255, 255, 255, 0.03);
+      --container-border: rgba(255, 255, 255, 0.08);
+      --interactive-bg: rgba(255, 255, 255, 0.05);
+      --interactive-border: rgba(255, 255, 255, 0.12);
+      --interactive-hover-bg: rgba(255, 255, 255, 0.1);
+      --interactive-hover-border: rgba(255, 255, 255, 0.25);
+      --destructive-color: #f87171;
+      --destructive-bg: rgba(248, 113, 113, 0.1);
+      --destructive-hover-bg: rgba(248, 113, 113, 0.2);
+      --animation-curve-fast: cubic-bezier(0.25, 0.8, 0.25, 1);
+      --animation-curve-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --animation-curve-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: var(--background-color);
+      color: var(--text-color);
+      overflow-x: hidden;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scrollbar-width: thin;
+      scrollbar-color: #4a4a4a var(--background-color);
+    }
+
+    ::-webkit-scrollbar {
+      width: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--background-color);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background-color: #4a4a4a;
+      border-radius: 6px;
+      border: 3px solid var(--background-color);
+    }
+
+    /* 2. BACKGROUND */
+    .bg-gradient {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 30% 20%, rgba(120, 119, 198, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.07) 0%, transparent 50%);
+      z-index: 1;
+      animation: subtleBreathe 10s ease-in-out infinite alternate;
+    }
+
+    @keyframes subtleBreathe {
+      from {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+
+      to {
+        transform: scale(1.05);
+        opacity: 1;
+      }
+    }
+
+    /* 3. LAYOUT & CONTAINER STYLING */
+    .main-wrapper {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 10;
+      padding: 80px 20px 40px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 700px;
+      background: var(--container-bg);
+      border: 1px solid var(--container-border);
+      padding: 32px 24px;
+      border-radius: 12px;
+      backdrop-filter: blur(20px);
+      opacity: 0;
+      transform: translateY(40px);
+      /* MODIFIED: Slightly longer animation duration, no delay */
+      animation: slideUpFadeIn 0.8s var(--animation-curve-bounce) forwards;
+    }
+
+    @keyframes slideUpFadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 4. ANIMATIONS & UI ELEMENTS */
+    .animated-group {
+      opacity: 0;
+      transform: translateX(-20px);
+      /* MODIFIED: Animation is now controlled by delays below */
+      animation: slideInStagger 0.7s var(--animation-curve-bounce) forwards;
+    }
+    
+    /* MODIFIED: Re-added with shorter delays for a subtle stagger effect */
+    .container>*:nth-child(1) {
+      animation-delay: 0.1s;
+    } /* h1 */
+    .container>*:nth-child(2) {
+      animation-delay: 0.15s;
+    } /* h2 */
+    .container>*:nth-child(3) {
+      animation-delay: 0.2s;
+    } /* search */
+    .container>*:nth-child(4) {
+      animation-delay: 0.25s;
+    } /* list */
+
+
+    @keyframes slideInStagger {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-color);
+    }
+
+    h2 {
+      text-align: center;
+      font-weight: 500;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: var(--text-color-secondary);
+    }
+
+    .top-right-buttons {
+      position: absolute;
+      top: 20px;
+      right: 40px;
+      z-index: 20;
+    }
+
+    .top-right-buttons button {
+      background: var(--interactive-bg);
+      border: 1px solid var(--interactive-border);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      margin-left: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s var(--animation-curve-fast);
+    }
+
+    .top-right-buttons button:hover {
+      background: var(--interactive-hover-bg);
+      border-color: var(--interactive-hover-border);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 5. SEARCH SECTION */
+    .search-section {
+      margin-bottom: 24px;
+    }
+
+    .search-container {
+      position: relative;
+      max-width: 450px;
+      margin: 0 auto;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 10px 16px;
+      font-size: 14px;
+      border: 1px solid var(--interactive-border);
+      border-radius: 8px;
+      background: var(--interactive-bg);
+      color: var(--text-color);
+      outline: none;
+      transition: all 0.3s var(--animation-curve-fast);
+      font-family: inherit;
+    }
+
+    .search-input:focus {
+      border-color: var(--interactive-hover-border);
+      background: var(--interactive-hover-bg);
+      box-shadow: 0 0 15px rgba(120, 119, 198, 0.2);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-color-secondary);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-color-secondary);
+      font-size: 18px;
+      transition: color 0.3s ease;
+      pointer-events: none;
+    }
+
+    .search-input:focus+.search-icon {
+      color: var(--text-color);
+    }
+
+    .search-results-count {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-color-secondary);
+      margin-top: 12px;
+      opacity: 0;
+      height: 0;
+      transform: translateY(-10px);
+      transition: all 0.3s ease;
+    }
+
+    .search-results-count.visible {
+      opacity: 1;
+      transform: translateY(0);
+      height: auto;
+    }
+
+    /* 6. SONG LIST */
+    .song-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .song-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--interactive-bg);
+      border: 1px solid var(--interactive-border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      padding: 12px 16px;
+      transition: all 0.3s var(--animation-curve-fast);
+      will-change: transform, background, border-color;
+    }
+
+    .song-item:hover {
+      transform: translateY(-4px) scale(1.01);
+      background: var(--interactive-hover-bg);
+      border-color: var(--interactive-hover-border);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .song-info-link {
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-grow: 1;
+    }
+
+    .song-info strong {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-color);
+      line-height: 1.4;
+      transition: color 0.3s ease;
+    }
+
+    .song-info span {
+      font-size: 13px;
+      color: var(--text-color-secondary);
+      font-weight: 400;
+      transition: color 0.3s ease;
+    }
+
+    .song-item:hover .song-info strong {
+      color: #fff;
+    }
+
+    .song-item:hover .song-info span {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .song-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .delete-btn {
+      background: var(--destructive-bg);
+      color: var(--destructive-color);
+      border: 1px solid transparent;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      font-size: 20px;
+      font-weight: 400;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s var(--animation-curve-fast);
+    }
+
+    .delete-btn:hover {
+      background: var(--destructive-color);
+      color: #fff;
+      transform: scale(1.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* 7. UTILITY & TRANSITIONS */
+    .no-songs {
+      text-align: center;
+      color: var(--text-color-secondary);
+      font-size: 15px;
+      padding: 40px 20px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
+      border: 1px dashed var(--interactive-border);
+    }
+
+    .no-songs a {
+      color: var(--primary-accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .no-songs a:hover {
+      text-decoration: underline;
+    }
+
+    .song-item.deleting {
+      animation: deleteItem 0.5s var(--animation-curve-fast) forwards;
+    }
+
+    @keyframes deleteItem {
+      to {
+        opacity: 0;
+        transform: scale(0.95);
+        height: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .container {
+        padding: 32px 16px;
+        margin: 0 10px;
+      }
+
+      .top-right-buttons {
+        right: 16px;
+        top: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        font-size: 15px;
+      }
+
+      .song-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .song-actions {
+        align-self: flex-end;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-gradient"></div>
+
+  <div class="top-right-buttons">
+    <button type="button" id="newDownloadBtn">New Download</button>
+    <button type="button" id="logoutBtn">Logout</button>
+  </div>
+
+  <div class="main-wrapper">
+    <div class="container">
+  <h1 class="animated-group">Your Library</h1>
+  <h2 class="animated-group">Browse everything you've save.</h2>
+
+      <div class="search-section animated-group">
+        <div class="search-container">
+          <input type="text" class="search-input" id="searchInput" placeholder="Search by filename...">
+        </div>
+        <div class="search-results-count" id="searchResultsCount"></div>
+      </div>
+
+      <div class="animated-group">
+        <ul class="song-list" id="songList"></ul>
+
+        <p class="no-songs" id="noSongsMessage" style="display:none;">
+          You haven't downloaded anything yet. <a href="/">Paste a YouTube link to start.</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const searchInput = document.getElementById('searchInput');
+    const searchResultsCount = document.getElementById('searchResultsCount');
+    const songList = document.getElementById('songList');
+    const noSongsMessage = document.getElementById('noSongsMessage');
+    const logoutBtn = document.getElementById('logoutBtn');
+  const newDownloadBtn = document.getElementById('newDownloadBtn');
+
+    let allDownloads = [];
+    let renderTimeout;
+
+    function formatLabel(item) {
+      const modeLabel = item.mode === 'audio' ? `${item.format.toUpperCase()} audio` : 'Video';
+      const dateLabel = new Date(item.createdAt).toLocaleString();
+      return `${modeLabel} · ${dateLabel}`;
+    }
+
+    function renderDownloads(items) {
+      songList.innerHTML = '';
+      if (items === allDownloads && !searchInput.value.trim()) {
+        searchResultsCount.textContent = '';
+        searchResultsCount.classList.remove('visible');
+      }
+      if (!items.length) {
+        noSongsMessage.style.display = 'block';
+        searchResultsCount.textContent = items === allDownloads ? '' : '0 downloads found';
+        searchResultsCount.classList.toggle('visible', items !== allDownloads);
+        return;
+      }
+      noSongsMessage.style.display = 'none';
+      items.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'song-item';
+        li.dataset.filename = item.originalName.toLowerCase();
+        li.dataset.mode = item.mode;
+        li.dataset.id = item.id;
+
+        const infoLink = document.createElement('a');
+        infoLink.href = `/player?id=${encodeURIComponent(item.id)}`;
+        infoLink.className = 'song-info-link';
+
+        const info = document.createElement('div');
+        info.className = 'song-info';
+        info.innerHTML = `<strong>${item.title || item.originalName}</strong><span>${formatLabel(item)}</span>`;
+        infoLink.appendChild(info);
+
+    const actions = document.createElement('div');
+    actions.className = 'song-actions';
+
+    const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.dataset.songId = item.id;
+        deleteBtn.title = 'Delete file';
+        deleteBtn.innerHTML = '&times;';
+
+    actions.append(deleteBtn);
+        li.append(infoLink, actions);
+        songList.appendChild(li);
+      });
+    }
+
+    function applySearch(term) {
+      const query = term.toLowerCase();
+      if (!query) {
+        searchResultsCount.textContent = '';
+        searchResultsCount.classList.remove('visible');
+        renderDownloads(allDownloads);
+        return;
+      }
+      const filtered = allDownloads.filter((item) =>
+        item.originalName.toLowerCase().includes(query) || (item.title || '').toLowerCase().includes(query)
+      );
+      searchResultsCount.textContent = `${filtered.length} download${filtered.length === 1 ? '' : 's'} found`;
+      searchResultsCount.classList.add('visible');
+      renderDownloads(filtered);
+    }
+
+    function setupSearch() {
+      searchInput.addEventListener('input', (event) => {
+        clearTimeout(renderTimeout);
+        renderTimeout = setTimeout(() => applySearch(event.target.value), 120);
+      });
+    }
+
+    async function deleteDownload(id, button) {
+      if (!confirm('Delete this file from your library?')) return;
+      button.disabled = true;
+      button.style.opacity = '0.6';
+      try {
+        const response = await fetch(`/api/downloads/${id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          throw new Error('Failed to delete');
+        }
+        allDownloads = allDownloads.filter((item) => item.id !== id);
+        applySearch(searchInput.value.trim());
+      } catch (error) {
+        alert('Could not delete file. Please try again.');
+        button.disabled = false;
+        button.style.opacity = '1';
+      }
+    }
+
+    function setupDelete() {
+      songList.addEventListener('click', (event) => {
+        const deleteButton = event.target.closest('.delete-btn');
+        if (!deleteButton) return;
+        const downloadId = deleteButton.dataset.songId;
+        deleteDownload(downloadId, deleteButton);
+      });
+    }
+
+    async function bootstrap() {
+      const meResponse = await fetch('/api/me');
+      const me = await meResponse.json();
+      if (!me.isAuthenticated) {
+        window.location.href = '/login';
+        return;
+      }
+
+      const downloadsResponse = await fetch('/api/downloads');
+      if (!downloadsResponse.ok) {
+        throw new Error('Failed to load downloads');
+      }
+      const payload = await downloadsResponse.json();
+      allDownloads = payload.downloads ?? [];
+      renderDownloads(allDownloads);
+      setupSearch();
+      setupDelete();
+    }
+
+    logoutBtn.addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login';
+    });
+
+    newDownloadBtn.addEventListener('click', () => {
+      window.location.href = '/';
+    });
+
+    bootstrap().catch((error) => {
+      console.error(error);
+      alert('Something went wrong while loading your downloads.');
+    });
+  </script>
+</body>
+
+</html>

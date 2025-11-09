@@ -1,0 +1,2882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediaPlayer-WompWomp</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --background-color: #0a0a0a;
+      --text-color: #ffffff;
+      --text-color-secondary: rgba(255, 255, 255, 0.7);
+      --primary-accent: #ffffff;
+      --primary-accent-text: #000000;
+      --container-bg: rgba(255, 255, 255, 0.03);
+      --container-border: rgba(255, 255, 255, 0.08);
+      --interactive-bg: rgba(255, 255, 255, 0.05);
+      --interactive-border: rgba(255, 255, 255, 0.12);
+      --interactive-hover-bg: rgba(255, 255, 255, 0.1);
+      --interactive-hover-border: rgba(255, 255, 255, 0.25);
+      --animation-curve-fast: cubic-bezier(0.25, 0.8, 0.25, 1);
+      --animation-curve-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --animation-curve-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      color-scheme: dark;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: var(--background-color);
+      color: var(--text-color);
+      overflow-x: hidden;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scrollbar-width: thin;
+      scrollbar-color: #4a4a4a var(--background-color);
+    }
+
+    ::-webkit-scrollbar {
+      width: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--background-color);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background-color: #4a4a4a;
+      border-radius: 6px;
+      border: 3px solid var(--background-color);
+    }
+
+    .bg-gradient {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 30% 20%, rgba(120, 119, 198, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.07) 0%, transparent 50%);
+      z-index: 1;
+      animation: subtleBreathe 10s ease-in-out infinite alternate;
+    }
+
+    @keyframes subtleBreathe {
+      from {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+
+      to {
+        transform: scale(1.05);
+        opacity: 1;
+      }
+    }
+
+    .top-right-buttons {
+      position: absolute;
+      top: 20px;
+      right: 40px;
+      z-index: 20;
+      display: flex;
+      gap: 10px;
+    }
+
+    .top-right-buttons button {
+      background: var(--interactive-bg);
+      border: 1px solid var(--interactive-border);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s var(--animation-curve-fast);
+    }
+
+    .top-right-buttons button:hover {
+      background: var(--interactive-hover-bg);
+      border-color: var(--interactive-hover-border);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .main-wrapper {
+      width: 100%;
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 10;
+      padding: 80px 20px 60px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1040px;
+      background: var(--container-bg);
+      border: 1px solid var(--container-border);
+      padding: 24px;
+      border-radius: 18px;
+      backdrop-filter: blur(20px);
+      opacity: 0;
+      transform: translateY(40px);
+      animation: slideUpFadeIn 0.9s var(--animation-curve-bounce) forwards;
+    }
+
+    @keyframes slideUpFadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .media-stage {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      min-height: 520px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.4);
+    }
+
+    .media-stage.hide-cursor {
+      cursor: none;
+    }
+
+    .media-stage video,
+    .media-stage audio {
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+
+    .media-stage video {
+      object-fit: contain;
+      background: #000;
+    }
+
+    .media-stage video.active {
+      display: block;
+    }
+
+    .media-stage audio.active {
+      display: block;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .audio-visualizer {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .audio-visualizer.visible {
+      display: flex;
+    }
+
+    .visualizer-bars {
+      display: flex;
+      gap: 12px;
+    }
+
+    .visualizer-bars span {
+      width: 10px;
+      height: 46px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(120, 119, 198, 0.85));
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+
+    .visualizer-bars span:nth-child(2) {
+      animation-delay: -0.2s;
+    }
+
+    .visualizer-bars span:nth-child(3) {
+      animation-delay: -0.4s;
+    }
+
+    .visualizer-bars span:nth-child(4) {
+      animation-delay: -0.6s;
+    }
+
+    @keyframes bounce {
+      0%,
+      100% {
+        transform: scaleY(0.45);
+        opacity: 0.65;
+      }
+
+      50% {
+        transform: scaleY(1.25);
+        opacity: 1;
+      }
+    }
+
+    .stage-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 10px 14px;
+      pointer-events: none;
+      transition: opacity 0.35s var(--animation-curve-smooth), transform 0.35s var(--animation-curve-smooth);
+    }
+
+    .icon-button {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--interactive-border);
+      background: var(--interactive-bg);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-size: 14px;
+      transition: all 0.25s var(--animation-curve-fast);
+      cursor: pointer;
+    }
+
+    .icon-button:hover {
+      transform: translateY(-3px);
+      border-color: var(--interactive-hover-border);
+      background: var(--interactive-hover-bg);
+    }
+
+    .icon-button:focus-visible {
+      outline: none;
+      border-color: var(--interactive-hover-border);
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
+    }
+
+    .stage-overlay.hidden {
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+    }
+
+    .stage-top,
+    .stage-controls {
+      pointer-events: auto;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(14px);
+      background: rgba(0, 0, 0, 0.55);
+    }
+
+    .stage-top {
+      padding: 6px 10px;
+      max-width: 360px;
+    }
+
+    .title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .title-block h1 {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--text-color);
+    }
+
+    .title-block p {
+      font-size: 10px;
+      color: var(--text-color-secondary);
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-top: 4px;
+    }
+
+    .badge {
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .badge.accent {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.28);
+      color: #fff;
+    }
+
+    .error-banner {
+      display: none;
+      margin-top: 5px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      border: 1px solid rgba(248, 113, 113, 0.4);
+      background: rgba(248, 113, 113, 0.15);
+      color: #fff;
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .error-banner.visible {
+      display: block;
+    }
+
+    .stage-controls {
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .primary-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .control-button {
+      background: var(--interactive-bg);
+      border: 1px solid var(--interactive-border);
+      color: #fff;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s var(--animation-curve-fast);
+    }
+
+    .control-button.primary {
+      width: 36px;
+      height: 36px;
+      font-size: 14px;
+      background: var(--primary-accent);
+      color: var(--primary-accent-text);
+      border: none;
+      box-shadow: 0 6px 16px rgba(255, 255, 255, 0.1);
+    }
+
+    .control-button:hover {
+      transform: translateY(-3px);
+      border-color: var(--interactive-hover-border);
+      background: var(--interactive-hover-bg);
+    }
+
+    .control-button.primary:hover {
+      background: #f0f0f0;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.3), 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .timeline input[type='range'] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 2px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      outline: none;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .timeline input[type='range']::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary-accent);
+      border: none;
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+      transition: transform 0.2s ease;
+    }
+
+    .timeline input[type='range']::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .timeline input[type='range']::-moz-range-thumb {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary-accent);
+      border: none;
+    }
+
+    .time-readout {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: var(--text-color-secondary);
+      letter-spacing: 0.2px;
+    }
+
+    .control-card {
+      flex: 1;
+      min-width: 90px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 4px 6px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .control-card label {
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-color-secondary);
+    }
+
+    .control-card input[type='range'] {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      height: 2px;
+      outline: none;
+    }
+
+    .control-card input[type='range']::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
+    }
+
+    .control-card input[type='range']::-moz-range-thumb {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+    }
+
+    .control-card .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .control-card .slider-row input[type='range'] {
+      flex: 1;
+    }
+
+    .control-card .value-tag {
+      min-width: 42px;
+      padding: 2px 6px;
+      font-size: 9px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.07);
+      text-align: center;
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .control-card.disabled {
+      opacity: 0.45;
+    }
+
+    .control-card.disabled select,
+    .control-card.disabled button,
+    .control-card.disabled input {
+      pointer-events: none;
+    }
+
+    .control-card select,
+    .control-card button {
+      width: 100%;
+      padding: 4px 6px;
+      border-radius: 7px;
+      border: 1px solid var(--interactive-border);
+      background: var(--interactive-bg);
+      color: #fff;
+      font-size: 9px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .control-card select option {
+      background-color: #111;
+      color: #fff;
+    }
+
+    .control-card select:focus,
+    .control-card button:focus,
+    .control-card input[type='range']:focus-visible {
+      outline: none;
+      border-color: var(--interactive-hover-border);
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
+    }
+
+    .control-card button.active {
+      background: var(--interactive-hover-bg);
+      border-color: var(--interactive-hover-border);
+    }
+
+    .action-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      margin-top: 5px;
+      flex-wrap: wrap;
+    }
+
+    .action-side {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .action-side-right {
+      margin-left: auto;
+      gap: 6px;
+      flex-wrap: nowrap;
+    }
+
+    .action-button {
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      padding: 0;
+      font-weight: 500;
+      font-size: 16px;
+      border: 1px solid var(--interactive-border);
+      background: var(--interactive-bg);
+      color: #fff;
+      text-decoration: none;
+      text-align: center;
+      transition: all 0.25s var(--animation-curve-fast);
+      cursor: pointer;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .action-button.primary {
+      background: var(--primary-accent);
+      color: var(--primary-accent-text);
+      border: none;
+      box-shadow: 0 5px 12px rgba(255, 255, 255, 0.12);
+    }
+
+    .action-button:hover {
+      transform: translateY(-3px);
+      border-color: var(--interactive-hover-border);
+      background: var(--interactive-hover-bg);
+    }
+
+    .action-button.active {
+      background: var(--interactive-hover-bg);
+      border-color: var(--interactive-hover-border);
+      color: #fff;
+    }
+
+    .action-button.primary:hover {
+      background: #f0f0f0;
+      color: #000;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.3), 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .volume-control {
+      flex: 0 0 180px;
+      max-width: 180px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--interactive-border);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+      transition: background 0.3s var(--animation-curve-smooth), border-color 0.3s var(--animation-curve-smooth), transform 0.3s var(--animation-curve-smooth);
+    }
+
+    .volume-control:hover {
+      border-color: var(--interactive-hover-border);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06));
+      transform: translateY(-2px);
+    }
+
+    .volume-control.muted {
+      opacity: 0.7;
+    }
+
+    .volume-control:focus-within {
+      border-color: var(--interactive-hover-border);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+
+    .volume-control button {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s var(--animation-curve-fast), background 0.3s var(--animation-curve-smooth);
+    }
+
+    .volume-control button:hover {
+      transform: scale(1.1);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .volume-control button:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
+    }
+
+    .volume-slider {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .volume-slider input[type='range'] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.8) var(--volume-progress, 80%), rgba(255, 255, 255, 0.12) var(--volume-progress, 80%));
+      cursor: pointer;
+      position: relative;
+      transition: background 0.3s ease;
+    }
+
+    .volume-slider input[type='range']:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
+    }
+
+    .volume-slider input[type='range']::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      border: none;
+      box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.15);
+      transition: transform 0.25s var(--animation-curve-fast), box-shadow 0.25s var(--animation-curve-fast);
+    }
+
+    .volume-slider input[type='range']::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.2);
+    }
+
+    .volume-slider input[type='range']::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      border: none;
+    }
+
+    .volume-slider input[type='range']::-moz-range-track {
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.8) var(--volume-progress, 80%), rgba(255, 255, 255, 0.12) var(--volume-progress, 80%));
+    }
+
+    .volume-percent {
+      min-width: 42px;
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.8);
+      text-align: right;
+      letter-spacing: 0.4px;
+    }
+
+    .action-button.wide {
+      width: auto;
+      min-width: 86px;
+      height: 30px;
+      padding: 0 14px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .controls-menu {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(14px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .controls-menu[hidden] {
+      display: none;
+    }
+
+    .preset-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .preset-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .preset-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .preset-heading {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-color-secondary);
+    }
+
+    .preset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .preset-empty {
+      font-size: 9px;
+      color: var(--text-color-secondary);
+      font-style: italic;
+    }
+
+    .preset-secondary-button {
+      align-self: flex-start;
+      margin-top: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--interactive-border);
+      background: transparent;
+      color: #fff;
+      font-size: 10px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .preset-secondary-button:hover {
+      border-color: var(--interactive-hover-border);
+      background: var(--interactive-hover-bg);
+    }
+
+    .preset-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .preset-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .preset-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .preset-description {
+      font-size: 9px;
+      color: var(--text-color-secondary);
+    }
+
+    .preset-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 9px;
+      color: var(--text-color-secondary);
+    }
+
+    .preset-meta span {
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .preset-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .preset-actions button {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--interactive-border);
+      background: transparent;
+      color: #fff;
+      font-size: 9px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .preset-actions button:hover {
+      border-color: var(--interactive-hover-border);
+      background: var(--interactive-hover-bg);
+    }
+
+    .preset-actions button.apply {
+      background: var(--primary-accent);
+      color: var(--primary-accent-text);
+      border: none;
+      box-shadow: 0 4px 10px rgba(255, 255, 255, 0.12);
+    }
+
+    .preset-actions button.apply:hover {
+      background: #f0f0f0;
+      color: #000;
+    }
+
+    .preset-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.55);
+    }
+
+    .preset-form[hidden] {
+      display: none;
+    }
+
+    .preset-form-title {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-color-secondary);
+    }
+
+    .preset-form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 8px;
+    }
+
+    .preset-form-grid label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 9px;
+      color: var(--text-color-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .preset-form-grid input,
+    .preset-form-grid select {
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--interactive-border);
+      background: var(--interactive-bg);
+      color: #fff;
+      font-size: 11px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .preset-form-grid input:focus,
+    .preset-form-grid select:focus {
+      border-color: var(--interactive-hover-border);
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
+    }
+
+    .preset-form-grid input[type='range'] {
+      padding: 0;
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .preset-reverb-value {
+      display: inline-block;
+      margin-top: 4px;
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.75);
+      letter-spacing: 0.2px;
+    }
+
+    .preset-form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .preset-form-actions .action-button {
+      min-width: 140px;
+    }
+
+    .preset-form-grid-custom {
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .controls-menu-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .controls-title {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-color-secondary);
+    }
+
+    .reset-button {
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--interactive-border);
+      background: transparent;
+      color: var(--text-color-secondary);
+      font-size: 9px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .reset-button:hover {
+      border-color: var(--interactive-hover-border);
+      background: var(--interactive-hover-bg);
+      color: #fff;
+    }
+
+    .reset-button.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 6px;
+    }
+
+    .control-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .chip-button {
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--interactive-border);
+      background: transparent;
+      color: var(--text-color-secondary);
+      font-size: 9px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: auto;
+    }
+
+    .chip-button.active {
+      background: var(--interactive-hover-bg);
+      border-color: var(--interactive-hover-border);
+      color: #fff;
+    }
+
+    .custom-eq-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 6px;
+      grid-column: 1 / -1;
+    }
+
+    .custom-eq-group.hidden {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .container {
+        padding: 18px;
+      }
+
+      .stage-overlay {
+        padding: 10px 12px;
+      }
+
+      .stage-controls {
+        padding: 7px;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .top-right-buttons {
+        right: 20px;
+        top: 16px;
+      }
+
+      .container {
+        padding: 14px;
+      }
+
+      .media-stage {
+        min-height: 400px;
+      }
+
+      .stage-overlay {
+        padding: 10px;
+      }
+
+      .stage-controls {
+        gap: 6px;
+        padding: 6px;
+      }
+
+      .primary-controls {
+        flex-wrap: wrap;
+      }
+
+      .action-row {
+        flex-direction: column;
+      }
+
+      .volume-control {
+        flex: 1 1 100%;
+        max-width: none;
+        width: 100%;
+      }
+
+      .action-side {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .action-side-right {
+        margin-left: 0;
+        justify-content: flex-end;
+      }
+
+      .action-side-left {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-gradient"></div>
+
+  <div class="top-right-buttons">
+    <button type="button" id="backButton">Back to Library</button>
+    <button type="button" id="logoutButton">Logout</button>
+  </div>
+
+  <div class="main-wrapper">
+    <div class="container">
+      <div class="media-stage">
+        <video id="videoElement" preload="metadata" playsinline crossorigin="anonymous"></video>
+        <audio id="audioElement" preload="metadata" crossorigin="anonymous"></audio>
+
+        <div class="audio-visualizer" id="audioVisualizer" aria-hidden="true">
+          <div class="visualizer-bars">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="stage-overlay">
+          <div class="stage-top">
+            <div class="title-block">
+              <h1 id="titleDisplay">Loading player…</h1>
+              <p id="subtitleDisplay">Please wait while we prepare your media.</p>
+            </div>
+
+            <div class="badge-row">
+              <span class="badge" id="modeBadge">—</span>
+              <span class="badge" id="formatBadge">—</span>
+              <span class="badge" id="resolutionBadge">—</span>
+              <span class="badge" id="createdBadge">—</span>
+            </div>
+
+            <div class="error-banner" id="errorBanner"></div>
+          </div>
+
+          <div class="stage-controls">
+            <div class="primary-controls">
+              <button type="button" class="control-button" id="skipBackBtn" title="Back 5 seconds">⟲</button>
+              <button type="button" class="control-button primary" id="playPauseBtn" title="Play/Pause">▶</button>
+              <button type="button" class="control-button" id="skipForwardBtn" title="Forward 5 seconds">⟳</button>
+            </div>
+
+            <div class="timeline">
+              <input type="range" id="timelineRange" min="0" max="100" value="0" step="1" />
+              <div class="time-readout">
+                <span id="elapsedTime">0:00</span>
+                <span id="remainingTime">0:00</span>
+              </div>
+            </div>
+            <div class="action-row">
+              <div class="action-side action-side-left">
+                <button
+                  type="button"
+                  class="action-button wide"
+                  id="controlsToggle"
+                  title="Show controls"
+                  aria-label="Show controls"
+                  aria-expanded="false"
+                  aria-controls="controlsMenu"
+                >Controls</button>
+                <div class="volume-control" id="volumeControl" aria-label="Volume control">
+                  <button
+                    type="button"
+                    id="muteButton"
+                    title="Mute"
+                    aria-label="Mute"
+                  >🔊</button>
+                  <div class="volume-slider">
+                    <input type="range" id="volumeRange" min="0" max="100" value="80" aria-label="Volume" />
+                  </div>
+                  <span class="volume-percent" id="volumeValue">80%</span>
+                </div>
+              </div>
+              <div class="action-side action-side-right">
+                <a
+                  class="icon-button"
+                  id="downloadButton"
+                  href="#"
+                  download
+                  title="Download original file"
+                  aria-label="Download original file"
+                >⤓</a>
+                <button
+                  type="button"
+                  class="icon-button"
+                  id="fullscreenButton"
+                  title="Enter full screen"
+                  aria-label="Enter full screen"
+                >⛶</button>
+              </div>
+            </div>
+
+            <div class="controls-menu" id="controlsMenu" hidden>
+              <div class="controls-menu-header">
+                <span class="controls-title">Controls</span>
+                <button type="button" class="reset-button" id="resetEnhancementsButton">Reset</button>
+              </div>
+              <div class="controls-grid">
+                <div class="control-card">
+                  <div class="control-card-header">
+                    <label for="speedRange">Speed</label>
+                    <button type="button" class="chip-button" id="pitchLockToggle" aria-pressed="true">Pitch Lock On</button>
+                  </div>
+                  <div class="slider-row">
+                    <input type="range" id="speedRange" min="0.25" max="2" step="0.05" value="1" />
+                    <span class="value-tag" id="speedValue">1.00×</span>
+                  </div>
+                </div>
+
+                <div class="control-card">
+                  <label for="loopToggle">Loop</label>
+                  <button type="button" id="loopToggle">Loop Off</button>
+                </div>
+
+                <div class="control-card" data-enhancement-card>
+                  <label for="eqPresetSelect">Equalizer</label>
+                  <select id="eqPresetSelect">
+                    <option value="off" selected>Neutral</option>
+                    <option value="warm">Warm</option>
+                    <option value="bright">Bright</option>
+                    <option value="vocal">Vocal</option>
+                    <option value="bassboost">Bass Boost</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+
+                <div class="custom-eq-group hidden" id="customEqGroup">
+                  <div class="control-card" data-enhancement-card>
+                    <label for="bassRange">Bass</label>
+                    <div class="slider-row">
+                      <input type="range" id="bassRange" min="-12" max="12" value="0" step="1" />
+                      <span class="value-tag" id="bassValue">0 dB</span>
+                    </div>
+                  </div>
+
+                  <div class="control-card" data-enhancement-card>
+                    <label for="trebleRange">Treble</label>
+                    <div class="slider-row">
+                      <input type="range" id="trebleRange" min="-12" max="12" value="0" step="1" />
+                      <span class="value-tag" id="trebleValue">0 dB</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="control-card" data-enhancement-card>
+                  <label for="reverbRange">Reverb</label>
+                  <div class="slider-row">
+                    <input type="range" id="reverbRange" min="0" max="100" value="0" step="1" />
+                    <span class="value-tag" id="reverbValue">0%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="preset-panel">
+                <div class="preset-panel-header">
+                  <span class="controls-title">Presets</span>
+                </div>
+                <div class="preset-section">
+                  <h3 class="preset-heading">Predefined</h3>
+                  <div class="preset-list" id="predefinedPresetList"></div>
+                </div>
+                <div class="preset-section">
+                  <h3 class="preset-heading">Custom</h3>
+                  <div class="preset-empty" id="customPresetEmpty">No custom presets yet.</div>
+                  <div class="preset-list" id="customPresetList"></div>
+                  <button type="button" class="preset-secondary-button" id="createPresetButton">New Custom Preset</button>
+                </div>
+                <form class="preset-form" id="customPresetForm" hidden>
+                  <h4 class="preset-form-title">Create or Edit Preset</h4>
+                  <div class="preset-form-grid">
+                    <label for="presetNameInput">Preset Name
+                      <input type="text" id="presetNameInput" name="presetName" placeholder="My preset" required />
+                    </label>
+                    <label for="presetSpeedInput">Speed (0.25–2.00×)
+                      <input type="number" id="presetSpeedInput" name="presetSpeed" min="0.25" max="2" step="0.01" value="1" required />
+                    </label>
+                    <label for="presetPitchLockInput">Pitch Lock
+                      <select id="presetPitchLockInput" name="presetPitchLock">
+                        <option value="true" selected>On</option>
+                        <option value="false">Off</option>
+                      </select>
+                    </label>
+                    <label for="presetEqInput">Equalizer Preset
+                      <select id="presetEqInput" name="presetEq">
+                        <option value="off" selected>Neutral</option>
+                        <option value="warm">Warm</option>
+                        <option value="bright">Bright</option>
+                        <option value="vocal">Vocal</option>
+                        <option value="bassboost">Bass Boost</option>
+                        <option value="custom">Custom (manual)</option>
+                      </select>
+                    </label>
+                    <label for="presetReverbInput">Reverb (%)
+                      <input type="range" id="presetReverbInput" name="presetReverb" min="0" max="100" value="0" />
+                      <span class="preset-reverb-value" id="presetReverbValue">0%</span>
+                    </label>
+                  </div>
+                  <div class="preset-form-grid preset-form-grid-custom" id="presetCustomEqFields" hidden>
+                    <label for="presetBassInput">Bass (dB)
+                      <input type="number" id="presetBassInput" name="presetBass" min="-12" max="12" step="1" value="0" />
+                    </label>
+                    <label for="presetMidInput">Mid (dB)
+                      <input type="number" id="presetMidInput" name="presetMid" min="-12" max="12" step="1" value="0" />
+                    </label>
+                    <label for="presetTrebleInput">Treble (dB)
+                      <input type="number" id="presetTrebleInput" name="presetTreble" min="-12" max="12" step="1" value="0" />
+                    </label>
+                  </div>
+                  <div class="preset-form-actions">
+                    <button type="submit" class="action-button wide">Save Preset</button>
+                    <button type="button" class="reset-button" id="loadCurrentPresetValues">Use Current Settings</button>
+                    <button type="button" class="reset-button" id="cancelPresetEdit">Cancel</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const downloadId = params.get('id');
+
+    const backButton = document.getElementById('backButton');
+    const logoutButton = document.getElementById('logoutButton');
+    const titleDisplay = document.getElementById('titleDisplay');
+    const subtitleDisplay = document.getElementById('subtitleDisplay');
+    const modeBadge = document.getElementById('modeBadge');
+    const formatBadge = document.getElementById('formatBadge');
+    const createdBadge = document.getElementById('createdBadge');
+  const resolutionBadge = document.getElementById('resolutionBadge');
+    const errorBanner = document.getElementById('errorBanner');
+
+    const videoElement = document.getElementById('videoElement');
+    const audioElement = document.getElementById('audioElement');
+  const audioVisualizer = document.getElementById('audioVisualizer');
+  const stageOverlay = document.querySelector('.stage-overlay');
+  const mediaStage = document.querySelector('.media-stage');
+  const overlayInteractiveRegions = Array.from(document.querySelectorAll('.stage-top, .stage-controls'));
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const skipBackBtn = document.getElementById('skipBackBtn');
+    const skipForwardBtn = document.getElementById('skipForwardBtn');
+    const timelineRange = document.getElementById('timelineRange');
+    const elapsedTime = document.getElementById('elapsedTime');
+    const remainingTime = document.getElementById('remainingTime');
+  const volumeRange = document.getElementById('volumeRange');
+  const speedRange = document.getElementById('speedRange');
+    const loopToggle = document.getElementById('loopToggle');
+  const muteButton = document.getElementById('muteButton');
+  const downloadButton = document.getElementById('downloadButton');
+  const controlsToggle = document.getElementById('controlsToggle');
+  const controlsMenu = document.getElementById('controlsMenu');
+  const predefinedPresetList = document.getElementById('predefinedPresetList');
+  const customPresetList = document.getElementById('customPresetList');
+  const customPresetEmpty = document.getElementById('customPresetEmpty');
+  const createPresetButton = document.getElementById('createPresetButton');
+  const customPresetForm = document.getElementById('customPresetForm');
+  const presetNameInput = document.getElementById('presetNameInput');
+  const presetSpeedInput = document.getElementById('presetSpeedInput');
+  const presetPitchLockInput = document.getElementById('presetPitchLockInput');
+  const presetEqInput = document.getElementById('presetEqInput');
+  const presetReverbInput = document.getElementById('presetReverbInput');
+  const presetReverbValue = document.getElementById('presetReverbValue');
+  const presetCustomEqFields = document.getElementById('presetCustomEqFields');
+  const presetBassInput = document.getElementById('presetBassInput');
+  const presetMidInput = document.getElementById('presetMidInput');
+  const presetTrebleInput = document.getElementById('presetTrebleInput');
+  const cancelPresetEdit = document.getElementById('cancelPresetEdit');
+  const loadCurrentPresetValues = document.getElementById('loadCurrentPresetValues');
+  const resetEnhancementsButton = document.getElementById('resetEnhancementsButton');
+  const pitchLockToggle = document.getElementById('pitchLockToggle');
+  const volumeValue = document.getElementById('volumeValue');
+  const volumeControl = document.getElementById('volumeControl');
+  const speedValue = document.getElementById('speedValue');
+  const bassRange = document.getElementById('bassRange');
+  const trebleRange = document.getElementById('trebleRange');
+  const bassValue = document.getElementById('bassValue');
+  const trebleValue = document.getElementById('trebleValue');
+  const eqPresetSelect = document.getElementById('eqPresetSelect');
+  const customEqGroup = document.getElementById('customEqGroup');
+  const reverbRange = document.getElementById('reverbRange');
+  const reverbValue = document.getElementById('reverbValue');
+  const enhancementCards = Array.from(document.querySelectorAll('[data-enhancement-card]'));
+  const fullscreenButton = document.getElementById('fullscreenButton');
+
+  if (resolutionBadge) {
+    resolutionBadge.style.display = 'none';
+  }
+
+    let mediaElement = null;
+    let metadata = null;
+    let rafId = null;
+    let isScrubbing = false;
+    let overlayHideTimeout = null;
+    let overlayAutoHideEnabled = false;
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    let audioContext = null;
+    const mediaSourceNodes = new WeakMap();
+    let bassFilter = null;
+    let midFilter = null;
+    let trebleFilter = null;
+    let dryGain = null;
+    let wetGain = null;
+    let reverbNode = null;
+    let reverbImpulseBuffer = null;
+    let activeSourceNode = null;
+    let currentBassGain = 0;
+    let currentTrebleGain = 0;
+    let currentMidGain = 0;
+    let currentReverbMix = 0;
+    let enhancementGraphReady = false;
+    let pitchLockEnabled = true;
+  let lastNonZeroVolume = 0.8;
+  let controlsMenuOpen = false;
+    let enhancementsBound = false;
+    let suppressPresetChange = false;
+    const EQ_PRESETS = {
+      off: { bass: 0, mid: 0, treble: 0 },
+      warm: { bass: 4, mid: -1, treble: -2 },
+      bright: { bass: -2, mid: 1, treble: 5 },
+      vocal: { bass: -3, mid: 3, treble: 3 },
+      bassboost: { bass: 6, mid: 1, treble: 1 }
+    };
+    const PREDEFINED_PRESETS = [
+      {
+        id: 'balanced-default',
+        name: 'Balanced Default',
+        description: 'Standard playback baseline',
+        config: {
+          speed: 1,
+          pitchLock: true,
+          eq: 'off',
+          reverb: 0,
+          bass: 0,
+          mid: 0,
+          treble: 0
+        }
+      },
+      {
+        id: 'slowed-reverb',
+        name: 'SLowed+reverb',
+        description: '0.85× speed, pitch lock off, bass boost, 50% reverb',
+        config: {
+          speed: 0.85,
+          pitchLock: false,
+          eq: 'bassboost',
+          reverb: 50,
+          bass: EQ_PRESETS.bassboost.bass,
+          mid: EQ_PRESETS.bassboost.mid,
+          treble: EQ_PRESETS.bassboost.treble
+        }
+      }
+    ];
+    const customPresets = [];
+    let editingPresetId = null;
+
+    function showError(message) {
+      errorBanner.textContent = message;
+      errorBanner.classList.add('visible');
+    }
+
+    function formatTime(seconds) {
+      if (!Number.isFinite(seconds)) return '0:00';
+      const floored = Math.max(seconds, 0);
+      const minutes = Math.floor(floored / 60);
+      const secs = Math.floor(floored % 60);
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function updatePlayButton() {
+      if (!mediaElement) return;
+      playPauseBtn.textContent = mediaElement.paused ? '▶' : '⏸';
+    }
+
+    function formatDb(value) {
+      if (!Number.isFinite(value)) return '0 dB';
+      const rounded = Math.round(value * 10) / 10;
+      const sign = rounded > 0 ? '+' : '';
+      return `${sign}${rounded} dB`;
+    }
+
+    function updateVolumeLabel(value) {
+      if (!volumeValue) return;
+      const safeValue = Number.isFinite(value) ? Math.round(value) : 0;
+      volumeValue.textContent = `${safeValue}%`;
+      if (volumeRange) {
+        volumeRange.style.setProperty('--volume-progress', `${safeValue}%`);
+      }
+      const isMuted = mediaElement ? mediaElement.muted || safeValue === 0 : safeValue === 0;
+      if (volumeControl) {
+        volumeControl.classList.toggle('muted', isMuted);
+      }
+    }
+
+    function setVolumeUI(percent) {
+      const safePercent = clamp(Number(percent) || 0, 0, 100);
+      if (volumeRange) {
+        volumeRange.value = safePercent;
+      }
+      updateVolumeLabel(safePercent);
+    }
+
+    function updateSpeedLabel(value) {
+      if (!speedValue) return;
+      const safeValue = Number.isFinite(value) ? value : 1;
+      speedValue.textContent = `${safeValue.toFixed(2)}×`;
+    }
+
+    function updateValueTagDisplay(tag, value) {
+      if (!tag) return;
+      tag.textContent = formatDb(value);
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function updateReverbLabel(value) {
+      if (!reverbValue) return;
+      const safeValue = Number.isFinite(value) ? Math.round(value) : 0;
+      reverbValue.textContent = `${safeValue}%`;
+    }
+
+    function getResolutionLabel(record) {
+      if (!record) return null;
+      const normalizedMode = typeof record.mode === 'string' ? record.mode.toLowerCase() : '';
+      if (normalizedMode !== 'video') return null;
+      if (typeof record.resolution === 'string' && record.resolution.trim()) {
+        return record.resolution.trim();
+      }
+      if (typeof record.resolution === 'string' && record.resolution.trim()) {
+        return record.resolution.trim();
+      }
+      const width = Number.parseInt(record.width ?? record.videoWidth ?? record.mediaWidth, 10);
+      const height = Number.parseInt(record.height ?? record.videoHeight ?? record.mediaHeight, 10);
+      if (Number.isFinite(height) && height > 0) {
+        return `${height}p`;
+      }
+      if (Number.isFinite(width) && width > 0) {
+        return `${width}px`;
+      }
+      if (typeof record.resolutionLabel === 'string' && record.resolutionLabel.trim()) {
+        return record.resolutionLabel.trim();
+      }
+      return null;
+    }
+
+    function updateReverbMix(percent) {
+      currentReverbMix = clamp(Number(percent) || 0, 0, 100);
+      const normalized = currentReverbMix / 100;
+      if (wetGain) {
+        wetGain.gain.value = normalized;
+      }
+      if (dryGain) {
+        dryGain.gain.value = 1 - normalized * 0.4;
+      }
+      updateReverbLabel(currentReverbMix);
+    }
+
+    function getReverbImpulse(ctx) {
+      if (!ctx) return null;
+      if (reverbImpulseBuffer) return reverbImpulseBuffer;
+      const durationSeconds = 2.2;
+      const sampleRate = ctx.sampleRate;
+      const length = sampleRate * durationSeconds;
+      const impulse = ctx.createBuffer(2, length, sampleRate);
+      for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+        const channelData = impulse.getChannelData(channel);
+        for (let i = 0; i < length; i += 1) {
+          const decay = Math.pow(1 - i / length, 2);
+          channelData[i] = (Math.random() * 2 - 1) * decay;
+        }
+      }
+      reverbImpulseBuffer = impulse;
+      return reverbImpulseBuffer;
+    }
+
+    function attachWheelSupport(input) {
+      if (!input) return;
+      input.addEventListener(
+        'wheel',
+        (event) => {
+          event.preventDefault();
+          const rawMin = Number.parseFloat(input.min);
+          const rawMax = Number.parseFloat(input.max);
+          const min = Number.isFinite(rawMin) ? rawMin : -Infinity;
+          const max = Number.isFinite(rawMax) ? rawMax : Infinity;
+          const step = Number.parseFloat(input.step) || 1;
+          const current = Number.parseFloat(input.value) || 0;
+          const delta = event.deltaY > 0 ? -step : step;
+          const next = clamp(current + delta, min, max);
+          if (next === current) return;
+          input.value = String(next);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+        { passive: false }
+      );
+    }
+
+    function setCustomEqVisibility(presetValue) {
+      if (!customEqGroup) return;
+      const isCustom = presetValue === 'custom';
+      customEqGroup.classList.toggle('hidden', !isCustom);
+    }
+
+    function ensureAudioContext() {
+      if (!AudioContextCtor) return null;
+      if (!audioContext) {
+        audioContext = new AudioContextCtor();
+      }
+      return audioContext;
+    }
+
+    function resumeAudioContext() {
+      if (!audioContext) return;
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().catch(() => {});
+      }
+    }
+
+    function ensureFilterNodes(ctx) {
+      if (!ctx) return;
+
+      if (!bassFilter) {
+        bassFilter = ctx.createBiquadFilter();
+        bassFilter.type = 'lowshelf';
+        bassFilter.frequency.value = 120;
+      }
+
+      if (!midFilter) {
+        midFilter = ctx.createBiquadFilter();
+        midFilter.type = 'peaking';
+        midFilter.frequency.value = 1000;
+        midFilter.Q.value = 1.0;
+      }
+
+      if (!trebleFilter) {
+        trebleFilter = ctx.createBiquadFilter();
+        trebleFilter.type = 'highshelf';
+        trebleFilter.frequency.value = 4500;
+      }
+
+      if (!dryGain) {
+        dryGain = ctx.createGain();
+        dryGain.gain.value = 1;
+      }
+
+      if (!wetGain) {
+        wetGain = ctx.createGain();
+        wetGain.gain.value = 0;
+      }
+
+      if (!reverbNode) {
+        reverbNode = ctx.createConvolver();
+      }
+
+      if (!reverbNode.buffer) {
+        reverbNode.buffer = getReverbImpulse(ctx);
+      }
+
+      if (!enhancementGraphReady) {
+        bassFilter.connect(midFilter);
+        midFilter.connect(trebleFilter);
+        trebleFilter.connect(dryGain);
+        trebleFilter.connect(wetGain);
+        wetGain.connect(reverbNode);
+        dryGain.connect(ctx.destination);
+        reverbNode.connect(ctx.destination);
+        enhancementGraphReady = true;
+      }
+
+      updateReverbMix(currentReverbMix);
+    }
+
+    function getOrCreateSourceNode(element, ctx) {
+      if (!element || !ctx) return null;
+      let node = mediaSourceNodes.get(element);
+      if (!node) {
+        node = ctx.createMediaElementSource(element);
+        mediaSourceNodes.set(element, node);
+      }
+      return node;
+    }
+
+    function setEnhancementControlsEnabled(enabled) {
+      const disabled = !enabled;
+      [bassRange, trebleRange, eqPresetSelect, reverbRange].forEach((el) => {
+        if (el) {
+          el.disabled = disabled;
+        }
+      });
+      if (resetEnhancementsButton) {
+        resetEnhancementsButton.disabled = disabled;
+        resetEnhancementsButton.classList.toggle('disabled', disabled);
+      }
+      enhancementCards.forEach((card) => {
+        card.classList.toggle('disabled', disabled);
+      });
+    }
+
+    function applyFilterGains(bassGain, trebleGain, midGain) {
+      if (!bassFilter || !midFilter || !trebleFilter) return;
+      bassFilter.gain.value = bassGain;
+      midFilter.gain.value = midGain;
+      trebleFilter.gain.value = trebleGain;
+    }
+
+    function resetEnhancementUI() {
+      suppressPresetChange = true;
+      currentBassGain = 0;
+      currentTrebleGain = 0;
+      currentMidGain = 0;
+      currentReverbMix = 0;
+      if (bassRange) bassRange.value = '0';
+      if (trebleRange) trebleRange.value = '0';
+      if (reverbRange) reverbRange.value = '0';
+      updateValueTagDisplay(bassValue, currentBassGain);
+      updateValueTagDisplay(trebleValue, currentTrebleGain);
+      updateReverbMix(0);
+      if (eqPresetSelect) eqPresetSelect.value = 'off';
+      setCustomEqVisibility('off');
+      suppressPresetChange = false;
+    }
+
+    function applyEqPreset(presetName) {
+      if (!eqPresetSelect) return;
+      if (!EQ_PRESETS[presetName]) {
+        return;
+      }
+      const preset = EQ_PRESETS[presetName];
+      suppressPresetChange = true;
+      currentBassGain = preset.bass;
+      currentTrebleGain = preset.treble;
+      currentMidGain = preset.mid ?? 0;
+      if (bassRange) bassRange.value = String(currentBassGain);
+      if (trebleRange) trebleRange.value = String(currentTrebleGain);
+      updateValueTagDisplay(bassValue, currentBassGain);
+      updateValueTagDisplay(trebleValue, currentTrebleGain);
+      suppressPresetChange = false;
+      applyFilterGains(currentBassGain, currentTrebleGain, currentMidGain);
+    }
+
+    function updateBassGain(value) {
+      currentBassGain = value;
+      updateValueTagDisplay(bassValue, value);
+      applyFilterGains(currentBassGain, currentTrebleGain, currentMidGain);
+    }
+
+    function updateTrebleGain(value) {
+      currentTrebleGain = value;
+      updateValueTagDisplay(trebleValue, value);
+      applyFilterGains(currentBassGain, currentTrebleGain, currentMidGain);
+    }
+
+    function updatePresetFormCustomVisibility(value) {
+      if (!presetCustomEqFields) return;
+      const targetValue = typeof value === 'string' ? value : presetEqInput ? presetEqInput.value : 'off';
+      presetCustomEqFields.hidden = targetValue !== 'custom';
+    }
+
+    function setPresetFormVisible(visible) {
+      if (!customPresetForm) return;
+      if (visible) {
+        customPresetForm.removeAttribute('hidden');
+      } else {
+        customPresetForm.setAttribute('hidden', '');
+      }
+    }
+
+    function resetPresetForm() {
+      if (!customPresetForm) return;
+      customPresetForm.reset();
+      editingPresetId = null;
+      if (presetNameInput) presetNameInput.value = '';
+      if (presetSpeedInput) presetSpeedInput.value = '1';
+      if (presetPitchLockInput) presetPitchLockInput.value = 'true';
+      if (presetEqInput) presetEqInput.value = 'off';
+      if (presetReverbInput) presetReverbInput.value = '0';
+      if (presetBassInput) presetBassInput.value = '0';
+      if (presetMidInput) presetMidInput.value = '0';
+      if (presetTrebleInput) presetTrebleInput.value = '0';
+      if (presetReverbValue) presetReverbValue.textContent = '0%';
+      updatePresetFormCustomVisibility('off');
+      customPresetForm.dataset.mode = 'create';
+      setPresetFormVisible(false);
+    }
+
+    function populatePresetForm(config, options = {}) {
+      if (!config || !customPresetForm) return;
+      const { name = '', isEditing = false } = options;
+      const safeSpeed = Number.isFinite(config.speed) ? config.speed : 1;
+      const safePitch = typeof config.pitchLock === 'boolean' ? config.pitchLock : true;
+      const safeEq = typeof config.eq === 'string' ? config.eq : 'off';
+      const safeReverb = Number.isFinite(config.reverb) ? clamp(config.reverb, 0, 100) : 0;
+      const safeBass = Number.isFinite(config.bass) ? clamp(config.bass, -12, 12) : 0;
+      const safeMid = Number.isFinite(config.mid) ? clamp(config.mid, -12, 12) : 0;
+      const safeTreble = Number.isFinite(config.treble) ? clamp(config.treble, -12, 12) : 0;
+      if (presetNameInput) presetNameInput.value = name;
+      if (presetSpeedInput) presetSpeedInput.value = String(safeSpeed);
+      if (presetPitchLockInput) presetPitchLockInput.value = safePitch ? 'true' : 'false';
+      if (presetEqInput) presetEqInput.value = safeEq;
+      if (presetReverbInput) presetReverbInput.value = String(safeReverb);
+      if (presetBassInput) presetBassInput.value = String(safeBass);
+      if (presetMidInput) presetMidInput.value = String(safeMid);
+      if (presetTrebleInput) presetTrebleInput.value = String(safeTreble);
+      if (presetReverbValue) presetReverbValue.textContent = `${Math.round(safeReverb)}%`;
+      updatePresetFormCustomVisibility(safeEq);
+      customPresetForm.dataset.mode = isEditing ? 'edit' : 'create';
+    }
+
+    function startPresetEdit(preset) {
+      if (!preset) {
+        resetPresetForm();
+        return;
+      }
+      editingPresetId = preset.id;
+      setPresetFormVisible(true);
+      populatePresetForm(preset.config, { name: preset.name, isEditing: true });
+      if (presetNameInput) {
+        presetNameInput.focus();
+        presetNameInput.select();
+      }
+    }
+
+    function captureCurrentPresetFromControls() {
+      const currentSpeed = speedRange ? Number.parseFloat(speedRange.value) : 1;
+      const currentEq = eqPresetSelect ? eqPresetSelect.value : 'off';
+      const currentReverb = reverbRange ? Number.parseInt(reverbRange.value, 10) || 0 : 0;
+      return {
+        speed: Number.isFinite(currentSpeed) ? currentSpeed : 1,
+        pitchLock: pitchLockEnabled,
+        eq: currentEq,
+        reverb: clamp(currentReverb, 0, 100),
+        bass: currentBassGain,
+        mid: currentMidGain,
+        treble: currentTrebleGain
+      };
+    }
+
+    function buildPresetMeta(config) {
+      if (!config) return [];
+      const items = [];
+      if (Number.isFinite(config.speed)) {
+        items.push(`Speed ${Number(config.speed).toFixed(2)}×`);
+      }
+      items.push(config.pitchLock ? 'Pitch Lock On' : 'Pitch Lock Off');
+      const eqLabel = typeof config.eq === 'string' ? config.eq : 'off';
+      const friendlyEq = eqLabel.charAt(0).toUpperCase() + eqLabel.slice(1);
+      items.push(`EQ ${friendlyEq}`);
+      if (eqLabel === 'custom') {
+        items.push(`Bass ${formatDb(config.bass ?? 0)}`);
+        items.push(`Mid ${formatDb(config.mid ?? 0)}`);
+        items.push(`Treble ${formatDb(config.treble ?? 0)}`);
+      }
+      if (Number.isFinite(config.reverb)) {
+        items.push(`Reverb ${Math.round(config.reverb)}%`);
+      }
+      return items;
+    }
+
+    function createPresetCard(preset, { isCustom = false } = {}) {
+      if (!preset) return null;
+      const card = document.createElement('div');
+      card.className = 'preset-card';
+
+      const info = document.createElement('div');
+      info.className = 'preset-info';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'preset-name';
+      nameEl.textContent = preset.name;
+      info.appendChild(nameEl);
+      if (preset.description) {
+        const descriptionEl = document.createElement('div');
+        descriptionEl.className = 'preset-description';
+        descriptionEl.textContent = preset.description;
+        info.appendChild(descriptionEl);
+      }
+      const meta = document.createElement('div');
+      meta.className = 'preset-meta';
+      buildPresetMeta(preset.config).forEach((label) => {
+        const badge = document.createElement('span');
+        badge.textContent = label;
+        meta.appendChild(badge);
+      });
+      info.appendChild(meta);
+
+      const actions = document.createElement('div');
+      actions.className = 'preset-actions';
+      const applyButton = document.createElement('button');
+      applyButton.type = 'button';
+      applyButton.classList.add('apply');
+      applyButton.textContent = 'Apply';
+      applyButton.addEventListener('click', () => {
+        applyPresetConfiguration(preset.config);
+      });
+      actions.appendChild(applyButton);
+
+      if (isCustom) {
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.textContent = 'Edit';
+        editButton.addEventListener('click', () => {
+          startPresetEdit(preset);
+        });
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', () => {
+          handleCustomPresetDelete(preset.id);
+        });
+        actions.appendChild(editButton);
+        actions.appendChild(deleteButton);
+      }
+
+      card.appendChild(info);
+      card.appendChild(actions);
+      return card;
+    }
+
+    function updatePresetEmptyState() {
+      if (!customPresetEmpty) return;
+      if (customPresets.length === 0) {
+        customPresetEmpty.removeAttribute('hidden');
+      } else {
+        customPresetEmpty.setAttribute('hidden', '');
+      }
+    }
+
+    function renderPresetLists() {
+      if (predefinedPresetList) {
+        predefinedPresetList.innerHTML = '';
+        PREDEFINED_PRESETS.forEach((preset) => {
+          const card = createPresetCard(preset, { isCustom: false });
+          if (card) {
+            predefinedPresetList.appendChild(card);
+          }
+        });
+      }
+      if (customPresetList) {
+        customPresetList.innerHTML = '';
+        customPresets.forEach((preset) => {
+          const card = createPresetCard(preset, { isCustom: true });
+          if (card) {
+            customPresetList.appendChild(card);
+          }
+        });
+      }
+      updatePresetEmptyState();
+    }
+
+    function applyPresetConfiguration(config) {
+      if (!config) return;
+      const targetSpeed = Number.isFinite(config.speed) ? clamp(config.speed, 0.25, 2) : 1;
+      if (speedRange) {
+        speedRange.value = String(targetSpeed);
+      }
+      updateSpeedLabel(targetSpeed);
+      if (mediaElement) {
+        mediaElement.playbackRate = targetSpeed;
+      }
+
+      pitchLockEnabled = typeof config.pitchLock === 'boolean' ? config.pitchLock : true;
+      applyPitchLockState();
+      updatePitchLockButton();
+
+      const targetEq = typeof config.eq === 'string' ? config.eq : 'off';
+      if (eqPresetSelect) {
+        suppressPresetChange = true;
+        eqPresetSelect.value = targetEq;
+        setCustomEqVisibility(targetEq);
+        suppressPresetChange = false;
+      }
+
+      if (targetEq === 'custom') {
+        const safeBass = Number.isFinite(config.bass) ? clamp(config.bass, -12, 12) : 0;
+        const safeMid = Number.isFinite(config.mid) ? clamp(config.mid, -12, 12) : 0;
+        const safeTreble = Number.isFinite(config.treble) ? clamp(config.treble, -12, 12) : 0;
+        currentBassGain = safeBass;
+        currentMidGain = safeMid;
+        currentTrebleGain = safeTreble;
+        if (bassRange) bassRange.value = String(safeBass);
+        if (trebleRange) trebleRange.value = String(safeTreble);
+        updateValueTagDisplay(bassValue, safeBass);
+        updateValueTagDisplay(trebleValue, safeTreble);
+        applyFilterGains(currentBassGain, currentTrebleGain, currentMidGain);
+      } else {
+        applyEqPreset(targetEq);
+      }
+
+      const safeReverb = Number.isFinite(config.reverb) ? clamp(config.reverb, 0, 100) : 0;
+      if (reverbRange) {
+        reverbRange.value = String(safeReverb);
+      }
+      updateReverbMix(safeReverb);
+
+      resumeAudioContext();
+      revealOverlayTemporarily();
+    }
+
+    function handleCustomPresetDelete(presetId) {
+      if (!presetId) return;
+      const index = customPresets.findIndex((preset) => preset.id === presetId);
+      if (index === -1) return;
+      customPresets.splice(index, 1);
+      if (editingPresetId === presetId) {
+        resetPresetForm();
+      }
+      renderPresetLists();
+    }
+
+    function buildPresetConfigFromForm() {
+      const rawSpeed = presetSpeedInput ? Number.parseFloat(presetSpeedInput.value) : 1;
+      const safeSpeed = Number.isFinite(rawSpeed) ? clamp(rawSpeed, 0.25, 2) : 1;
+      const pitchLock = presetPitchLockInput ? presetPitchLockInput.value !== 'false' : true;
+      const eqValue = presetEqInput ? presetEqInput.value : 'off';
+      const rawReverb = presetReverbInput ? Number.parseInt(presetReverbInput.value, 10) || 0 : 0;
+      const safeReverb = clamp(rawReverb, 0, 100);
+      const rawBass = presetBassInput ? Number.parseFloat(presetBassInput.value) : 0;
+      const rawMid = presetMidInput ? Number.parseFloat(presetMidInput.value) : 0;
+      const rawTreble = presetTrebleInput ? Number.parseFloat(presetTrebleInput.value) : 0;
+      const safeBass = Number.isFinite(rawBass) ? clamp(rawBass, -12, 12) : 0;
+      const safeMid = Number.isFinite(rawMid) ? clamp(rawMid, -12, 12) : 0;
+      const safeTreble = Number.isFinite(rawTreble) ? clamp(rawTreble, -12, 12) : 0;
+      const config = {
+        speed: safeSpeed,
+        pitchLock,
+        eq: eqValue,
+        reverb: safeReverb,
+        bass: safeBass,
+        mid: safeMid,
+        treble: safeTreble
+      };
+      if (eqValue !== 'custom' && EQ_PRESETS[eqValue]) {
+        config.bass = EQ_PRESETS[eqValue].bass;
+        config.mid = EQ_PRESETS[eqValue].mid ?? 0;
+        config.treble = EQ_PRESETS[eqValue].treble;
+      }
+      return config;
+    }
+
+    function handleCustomPresetSubmit(event) {
+      event.preventDefault();
+      if (!customPresetForm) return;
+      const rawName = presetNameInput ? presetNameInput.value.trim() : '';
+      if (!rawName) {
+        return;
+      }
+      const config = buildPresetConfigFromForm();
+      const isEditing = customPresetForm.dataset.mode === 'edit' && editingPresetId;
+      if (isEditing) {
+        const index = customPresets.findIndex((preset) => preset.id === editingPresetId);
+        if (index !== -1) {
+          customPresets[index] = {
+            ...customPresets[index],
+            name: rawName,
+            config
+          };
+        }
+      } else {
+        const newPreset = {
+          id: `custom-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          name: rawName,
+          description: 'Saved from custom values',
+          config
+        };
+        customPresets.push(newPreset);
+      }
+      renderPresetLists();
+      resetPresetForm();
+    }
+
+    function bindEnhancementControls() {
+      if (enhancementsBound) return;
+      enhancementsBound = true;
+
+      attachWheelSupport(bassRange);
+      attachWheelSupport(trebleRange);
+      attachWheelSupport(reverbRange);
+
+      if (bassRange) {
+        bassRange.addEventListener('input', (event) => {
+          const value = Number.parseInt(event.target.value, 10) || 0;
+          updateBassGain(value);
+          resumeAudioContext();
+          if (!suppressPresetChange && eqPresetSelect) {
+            eqPresetSelect.value = 'custom';
+          }
+        });
+      }
+
+      if (trebleRange) {
+        trebleRange.addEventListener('input', (event) => {
+          const value = Number.parseInt(event.target.value, 10) || 0;
+          updateTrebleGain(value);
+          resumeAudioContext();
+          if (!suppressPresetChange && eqPresetSelect) {
+            eqPresetSelect.value = 'custom';
+          }
+        });
+      }
+
+      if (eqPresetSelect) {
+        eqPresetSelect.addEventListener('change', (event) => {
+          if (suppressPresetChange) return;
+          const value = event.target.value;
+          setCustomEqVisibility(value);
+          if (value === 'custom') {
+            resumeAudioContext();
+            return;
+          }
+          applyEqPreset(value);
+          resumeAudioContext();
+        });
+      }
+
+      if (reverbRange) {
+        reverbRange.addEventListener('input', (event) => {
+          const value = Number.parseInt(event.target.value, 10) || 0;
+          updateReverbMix(value);
+          resumeAudioContext();
+        });
+      }
+    }
+
+    function setupAudioEnhancements(element) {
+      bindEnhancementControls();
+      if (!AudioContextCtor || !element) {
+        setEnhancementControlsEnabled(false);
+        return;
+      }
+
+      const ctx = ensureAudioContext();
+      if (!ctx) {
+        setEnhancementControlsEnabled(false);
+        return;
+      }
+
+      ensureFilterNodes(ctx);
+      const sourceNode = getOrCreateSourceNode(element, ctx);
+      if (!sourceNode) {
+        setEnhancementControlsEnabled(false);
+        return;
+      }
+
+      try {
+        sourceNode.disconnect();
+      } catch (error) {
+        console.debug('Audio source disconnect warning', error);
+      }
+
+      if (activeSourceNode && activeSourceNode !== sourceNode) {
+        try {
+          activeSourceNode.disconnect();
+        } catch (error) {
+          console.debug('Previous source disconnect warning', error);
+        }
+      }
+
+      sourceNode.connect(bassFilter);
+      activeSourceNode = sourceNode;
+      applyFilterGains(currentBassGain, currentTrebleGain, currentMidGain);
+      updateReverbMix(currentReverbMix);
+      setCustomEqVisibility(eqPresetSelect ? eqPresetSelect.value : 'off');
+      setEnhancementControlsEnabled(true);
+    }
+
+    function updateMuteButton() {
+      if (!muteButton) return;
+      const isEffectivelyMuted = mediaElement ? mediaElement.muted || mediaElement.volume === 0 : false;
+      const icon = getVolumeIcon();
+      const label = isEffectivelyMuted ? 'Unmute' : 'Mute';
+      muteButton.textContent = icon;
+      muteButton.setAttribute('aria-label', label);
+      muteButton.title = label;
+      muteButton.setAttribute('aria-pressed', String(isEffectivelyMuted));
+      if (volumeControl) {
+        volumeControl.classList.toggle('muted', isEffectivelyMuted);
+      }
+    }
+
+    function getVolumeIcon() {
+      if (!mediaElement) return '🔊';
+      if (mediaElement.muted || mediaElement.volume === 0) return '🔇';
+      if (mediaElement.volume < 0.34) return '🔈';
+      if (mediaElement.volume < 0.67) return '🔉';
+      return '🔊';
+    }
+
+    function applyPitchLockState() {
+      if (!mediaElement) return;
+      ['preservesPitch', 'mozPreservesPitch', 'webkitPreservesPitch'].forEach((prop) => {
+        if (prop in mediaElement) {
+          mediaElement[prop] = pitchLockEnabled;
+        }
+      });
+    }
+
+    function updatePitchLockButton() {
+      if (!pitchLockToggle) return;
+      const label = pitchLockEnabled ? 'Pitch Lock On' : 'Pitch Lock Off';
+      pitchLockToggle.textContent = label;
+      pitchLockToggle.classList.toggle('active', pitchLockEnabled);
+      pitchLockToggle.setAttribute('aria-pressed', String(pitchLockEnabled));
+    }
+
+    function updateFullscreenButton() {
+      if (!fullscreenButton) return;
+      if (typeof document.fullscreenEnabled !== 'undefined' && !document.fullscreenEnabled) {
+        fullscreenButton.style.display = 'none';
+        return;
+      }
+  const fullscreenTarget = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+  const isActive = Boolean(fullscreenTarget && fullscreenTarget === mediaStage);
+      const icon = isActive ? '🗗' : '⛶';
+      const label = isActive ? 'Exit full screen' : 'Enter full screen';
+      fullscreenButton.textContent = icon;
+      fullscreenButton.setAttribute('aria-label', label);
+      fullscreenButton.title = label;
+    }
+
+    async function toggleFullscreen() {
+      if (!mediaStage) return;
+      if (document.fullscreenEnabled === false) return;
+      const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+      try {
+        if (fullscreenElement) {
+          if (document.exitFullscreen) {
+            await document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+          }
+        } else if (mediaStage.requestFullscreen) {
+          await mediaStage.requestFullscreen();
+        } else if (mediaStage.webkitRequestFullscreen) {
+          mediaStage.webkitRequestFullscreen();
+        } else if (mediaStage.msRequestFullscreen) {
+          mediaStage.msRequestFullscreen();
+        }
+      } catch (error) {
+        console.error('Fullscreen toggle failed', error);
+      }
+      revealOverlayTemporarily();
+    }
+
+    function handleFullscreenChange() {
+      updateFullscreenButton();
+      if (!document.fullscreenElement) {
+        showOverlay();
+        clearOverlayHideTimer();
+      } else {
+        revealOverlayTemporarily();
+      }
+    }
+
+    function setControlsMenuState(open, options = {}) {
+      if (!controlsMenu || !controlsToggle) return;
+      const { skipAutoHide = false } = options;
+      controlsMenuOpen = Boolean(open);
+      if (controlsMenuOpen) {
+        controlsMenu.removeAttribute('hidden');
+        controlsToggle.classList.add('active');
+        controlsToggle.setAttribute('aria-expanded', 'true');
+        controlsToggle.setAttribute('aria-label', 'Hide controls');
+        showOverlay();
+        clearOverlayHideTimer();
+      } else {
+        controlsMenu.setAttribute('hidden', '');
+        controlsToggle.classList.remove('active');
+        controlsToggle.setAttribute('aria-expanded', 'false');
+        controlsToggle.setAttribute('aria-label', 'Show controls');
+        if (overlayAutoHideEnabled && !skipAutoHide) {
+          scheduleOverlayHide();
+        }
+      }
+    }
+
+    function showOverlay() {
+      if (!stageOverlay) return;
+      stageOverlay.classList.remove('hidden');
+      if (mediaStage) {
+        mediaStage.classList.remove('hide-cursor');
+      }
+    }
+
+    function hideOverlay() {
+      if (!stageOverlay) return;
+      if (controlsMenuOpen) {
+        setControlsMenuState(false, { skipAutoHide: true });
+      }
+      stageOverlay.classList.add('hidden');
+      if (mediaStage) {
+        mediaStage.classList.add('hide-cursor');
+      }
+    }
+
+    function clearOverlayHideTimer() {
+      if (overlayHideTimeout) {
+        clearTimeout(overlayHideTimeout);
+        overlayHideTimeout = null;
+      }
+    }
+
+    function scheduleOverlayHide() {
+      if (!overlayAutoHideEnabled || !mediaElement || mediaElement.paused || controlsMenuOpen) {
+        clearOverlayHideTimer();
+        return;
+      }
+      clearOverlayHideTimer();
+      overlayHideTimeout = setTimeout(() => {
+        hideOverlay();
+      }, 5000);
+    }
+
+    function isEventInsideControls(event) {
+      if (!event || !overlayInteractiveRegions.length) return false;
+      const path = event.composedPath ? event.composedPath() : [];
+      return path.some((node) => overlayInteractiveRegions.includes(node));
+    }
+
+    function revealOverlayTemporarily() {
+      showOverlay();
+      if (overlayAutoHideEnabled) {
+        scheduleOverlayHide();
+      } else {
+        clearOverlayHideTimer();
+      }
+    }
+
+    function scheduleTimelineUpdate() {
+      if (!mediaElement || isScrubbing) return;
+      const duration = mediaElement.duration || 0;
+      const current = mediaElement.currentTime || 0;
+      timelineRange.max = duration ? Math.floor(duration) : 0;
+      timelineRange.value = Math.floor(current);
+      elapsedTime.textContent = formatTime(current);
+      const remaining = duration ? duration - current : 0;
+      remainingTime.textContent = duration ? `-${formatTime(remaining)}` : '0:00';
+      rafId = requestAnimationFrame(scheduleTimelineUpdate);
+    }
+
+    function cancelTimelineUpdate() {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    }
+
+    function attachMediaEvents() {
+      mediaElement.addEventListener('loadedmetadata', () => {
+        timelineRange.max = Math.floor(mediaElement.duration || 0);
+        scheduleTimelineUpdate();
+      });
+
+      mediaElement.addEventListener('play', () => {
+        updatePlayButton();
+        cancelTimelineUpdate();
+        scheduleTimelineUpdate();
+        showOverlay();
+        scheduleOverlayHide();
+      });
+
+      mediaElement.addEventListener('pause', () => {
+        updatePlayButton();
+        cancelTimelineUpdate();
+        scheduleTimelineUpdate();
+        showOverlay();
+        clearOverlayHideTimer();
+      });
+
+      mediaElement.addEventListener('ended', () => {
+        mediaElement.currentTime = 0;
+        mediaElement.pause();
+        showOverlay();
+        clearOverlayHideTimer();
+      });
+
+      mediaElement.addEventListener('volumechange', () => {
+        const normalizedVolume = clamp(mediaElement.volume || 0, 0, 1);
+        const percent = Math.round(normalizedVolume * 100);
+        if (!mediaElement.muted && normalizedVolume > 0) {
+          lastNonZeroVolume = normalizedVolume;
+        }
+        const displayPercent = mediaElement.muted ? 0 : percent;
+        setVolumeUI(displayPercent);
+        updateMuteButton();
+      });
+    }
+
+    function configureMedia(record) {
+    const streamUrl = `/api/downloads/${record.id}/stream?ts=${Date.now()}`;
+    downloadButton.href = `/api/downloads/${record.id}/file`;
+    downloadButton.download = record.originalName;
+    downloadButton.title = `Download ${record.originalName}`;
+    downloadButton.setAttribute('aria-label', `Download ${record.originalName}`);
+
+      videoElement.classList.remove('active');
+      audioElement.classList.remove('active');
+      audioVisualizer.classList.remove('visible');
+
+      videoElement.controls = false;
+      audioElement.controls = false;
+
+      if (record.mode === 'video') {
+        mediaElement = videoElement;
+        videoElement.src = streamUrl;
+        videoElement.classList.add('active');
+        overlayAutoHideEnabled = true;
+      } else {
+        mediaElement = audioElement;
+        audioElement.src = streamUrl;
+        audioElement.classList.add('active');
+        audioVisualizer.classList.add('visible');
+        overlayAutoHideEnabled = false;
+      }
+
+      mediaElement.volume = 0.8;
+      mediaElement.muted = false;
+      mediaElement.playbackRate = 1;
+      mediaElement.loop = false;
+      lastNonZeroVolume = 0.8;
+      setVolumeUI(80);
+      if (speedRange) {
+        speedRange.value = '1';
+      }
+      updateSpeedLabel(1);
+      loopToggle.textContent = 'Loop Off';
+      loopToggle.classList.remove('active');
+      errorBanner.classList.remove('visible');
+      errorBanner.textContent = '';
+
+  resetEnhancementUI();
+  setControlsMenuState(false, { skipAutoHide: true });
+      setupAudioEnhancements(mediaElement);
+      applyPitchLockState();
+      updatePitchLockButton();
+      updateReverbMix(currentReverbMix);
+
+      updatePlayButton();
+      updateMuteButton();
+      updateFullscreenButton();
+      showOverlay();
+      clearOverlayHideTimer();
+      scheduleOverlayHide();
+
+      attachMediaEvents();
+    }
+
+    function bindControls() {
+      playPauseBtn.addEventListener('click', () => {
+        if (!mediaElement) return;
+        if (mediaElement.paused) {
+          mediaElement.play().catch((err) => {
+            console.error('Playback failed', err);
+            showError('Autoplay blocked. Press play again to start playback.');
+          });
+        } else {
+          mediaElement.pause();
+        }
+      });
+
+      skipBackBtn.addEventListener('click', () => {
+        if (!mediaElement) return;
+        mediaElement.currentTime = Math.max(0, mediaElement.currentTime - 5);
+      });
+
+      skipForwardBtn.addEventListener('click', () => {
+        if (!mediaElement) return;
+        const duration = mediaElement.duration || 0;
+        mediaElement.currentTime = Math.min(duration, mediaElement.currentTime + 5);
+      });
+
+      timelineRange.addEventListener('input', (event) => {
+        if (!mediaElement) return;
+        isScrubbing = true;
+        elapsedTime.textContent = formatTime(event.target.valueAsNumber);
+      });
+
+      timelineRange.addEventListener('change', (event) => {
+        if (!mediaElement) return;
+        mediaElement.currentTime = event.target.valueAsNumber;
+        isScrubbing = false;
+        scheduleTimelineUpdate();
+      });
+
+      volumeRange.addEventListener('input', (event) => {
+        const rawPercent = Number.isFinite(event.target.valueAsNumber) ? event.target.valueAsNumber : 0;
+        const percent = clamp(rawPercent, 0, 100);
+        const normalized = percent / 100;
+        if (mediaElement) {
+          mediaElement.volume = normalized;
+          if (percent === 0) {
+            mediaElement.muted = true;
+          } else {
+            mediaElement.muted = false;
+            lastNonZeroVolume = normalized;
+          }
+        }
+        setVolumeUI(percent);
+        updateMuteButton();
+      });
+
+      attachWheelSupport(volumeRange);
+
+      if (speedRange) {
+        speedRange.addEventListener('input', (event) => {
+          if (!mediaElement) return;
+          const rawValue = Number.parseFloat(event.target.value);
+          const min = Number.parseFloat(speedRange.min) || 0.25;
+          const max = Number.parseFloat(speedRange.max) || 2;
+          const nextRate = clamp(Number.isFinite(rawValue) ? rawValue : 1, min, max);
+          mediaElement.playbackRate = nextRate;
+          updateSpeedLabel(nextRate);
+          applyPitchLockState();
+        });
+        attachWheelSupport(speedRange);
+      }
+
+      muteButton.addEventListener('click', () => {
+        if (!mediaElement) return;
+        const effectivelyMuted = mediaElement.muted || mediaElement.volume === 0;
+        if (effectivelyMuted) {
+          const restoredVolume = lastNonZeroVolume > 0 ? lastNonZeroVolume : 0.5;
+          mediaElement.muted = false;
+          mediaElement.volume = restoredVolume;
+          lastNonZeroVolume = restoredVolume;
+          setVolumeUI(Math.round(restoredVolume * 100));
+        } else {
+          lastNonZeroVolume = mediaElement.volume > 0 ? mediaElement.volume : lastNonZeroVolume;
+          mediaElement.muted = true;
+          mediaElement.volume = 0;
+          setVolumeUI(0);
+        }
+        updateMuteButton();
+      });
+
+      loopToggle.addEventListener('click', () => {
+        if (!mediaElement) return;
+        mediaElement.loop = !mediaElement.loop;
+        loopToggle.textContent = mediaElement.loop ? 'Loop On' : 'Loop Off';
+        loopToggle.classList.toggle('active', mediaElement.loop);
+      });
+
+      if (controlsToggle) {
+        controlsToggle.addEventListener('click', () => {
+          setControlsMenuState(!controlsMenuOpen);
+        });
+      }
+
+      if (customPresetForm) {
+        customPresetForm.addEventListener('submit', handleCustomPresetSubmit);
+      }
+
+      if (cancelPresetEdit) {
+        cancelPresetEdit.addEventListener('click', () => {
+          resetPresetForm();
+        });
+      }
+
+      if (presetEqInput) {
+        presetEqInput.addEventListener('change', (event) => {
+          updatePresetFormCustomVisibility(event.target.value);
+        });
+      }
+
+      if (presetReverbInput) {
+        presetReverbInput.addEventListener('input', (event) => {
+          const value = clamp(Number(event.target.value) || 0, 0, 100);
+          event.target.value = String(value);
+          if (presetReverbValue) {
+            presetReverbValue.textContent = `${Math.round(value)}%`;
+          }
+        });
+        attachWheelSupport(presetReverbInput);
+      }
+
+      if (createPresetButton) {
+        createPresetButton.addEventListener('click', () => {
+          resetPresetForm();
+          setPresetFormVisible(true);
+          if (presetNameInput) {
+            presetNameInput.focus();
+          }
+        });
+      }
+
+      if (loadCurrentPresetValues) {
+        loadCurrentPresetValues.addEventListener('click', () => {
+          const config = captureCurrentPresetFromControls();
+          const isEditing = customPresetForm ? customPresetForm.dataset.mode === 'edit' && editingPresetId : false;
+          let presetName = '';
+          if (isEditing && editingPresetId) {
+            const existing = customPresets.find((preset) => preset.id === editingPresetId);
+            presetName = existing ? existing.name : presetNameInput ? presetNameInput.value.trim() : '';
+          } else if (presetNameInput) {
+            presetName = presetNameInput.value.trim();
+          }
+          populatePresetForm(config, { name: presetName, isEditing });
+          setPresetFormVisible(true);
+        });
+      }
+
+      if (resetEnhancementsButton) {
+        resetEnhancementsButton.addEventListener('click', () => {
+          resetEnhancementUI();
+          applyFilterGains(currentBassGain, currentTrebleGain, currentMidGain);
+          updateReverbMix(currentReverbMix);
+          setVolumeUI(80);
+          if (speedRange) {
+            speedRange.value = '1';
+            updateSpeedLabel(1);
+          }
+          if (mediaElement) {
+            mediaElement.volume = 0.8;
+            mediaElement.muted = false;
+            mediaElement.playbackRate = 1;
+            lastNonZeroVolume = 0.8;
+          }
+          updateMuteButton();
+          resumeAudioContext();
+        });
+      }
+
+      if (pitchLockToggle) {
+        pitchLockToggle.addEventListener('click', () => {
+          pitchLockEnabled = !pitchLockEnabled;
+          applyPitchLockState();
+          updatePitchLockButton();
+        });
+      }
+
+      if (fullscreenButton) {
+        fullscreenButton.addEventListener('click', () => {
+          toggleFullscreen();
+        });
+      }
+
+      if (mediaStage) {
+        mediaStage.addEventListener('mousemove', () => {
+          revealOverlayTemporarily();
+        });
+
+        mediaStage.addEventListener('click', (event) => {
+          if (!overlayAutoHideEnabled || !mediaElement || mediaElement.paused) {
+            revealOverlayTemporarily();
+            return;
+          }
+
+          if (isEventInsideControls(event)) {
+            revealOverlayTemporarily();
+            return;
+          }
+
+          const overlayHidden = stageOverlay && stageOverlay.classList.contains('hidden');
+          if (overlayHidden) {
+            revealOverlayTemporarily();
+          } else {
+            hideOverlay();
+            clearOverlayHideTimer();
+          }
+        });
+      }
+
+      overlayInteractiveRegions.forEach((region) => {
+        region.addEventListener('mouseenter', () => {
+          clearOverlayHideTimer();
+        });
+
+        region.addEventListener('mouseleave', () => {
+          scheduleOverlayHide();
+        });
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.code === 'Escape') {
+          let handled = false;
+          if (controlsMenuOpen) {
+            setControlsMenuState(false);
+            handled = true;
+          }
+          if (handled) {
+            event.preventDefault();
+            return;
+          }
+        }
+        if (!mediaElement) return;
+        if (event.code === 'Space') {
+          event.preventDefault();
+          playPauseBtn.click();
+        }
+        if (event.code === 'ArrowLeft') {
+          event.preventDefault();
+          skipBackBtn.click();
+        }
+        if (event.code === 'ArrowRight') {
+          event.preventDefault();
+          skipForwardBtn.click();
+        }
+        if (event.code === 'KeyF') {
+          event.preventDefault();
+          toggleFullscreen();
+        }
+        revealOverlayTemporarily();
+      });
+
+      document.addEventListener('click', (event) => {
+        const clickedInsideOverlay = stageOverlay ? stageOverlay.contains(event.target) : false;
+        if (controlsMenuOpen && !clickedInsideOverlay) {
+          setControlsMenuState(false, { skipAutoHide: true });
+        }
+        if (!overlayAutoHideEnabled || !mediaElement || mediaElement.paused) return;
+        if (isEventInsideControls(event)) return;
+        if (mediaStage && mediaStage.contains(event.target)) return;
+        hideOverlay();
+        clearOverlayHideTimer();
+      });
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    function renderMeta(record) {
+      const fallbackTitle = record.originalName || 'Untitled Capture';
+      titleDisplay.textContent = record.title || fallbackTitle;
+
+      const candidateDate = record && record.createdAt ? new Date(record.createdAt) : null;
+      const isValidDate = candidateDate instanceof Date && !Number.isNaN(candidateDate.valueOf());
+      const capturedLabel = isValidDate ? candidateDate.toLocaleString() : null;
+      subtitleDisplay.textContent = capturedLabel
+        ? `Captured ${capturedLabel} • Saved from YouTube`
+        : 'Saved from YouTube';
+
+  const rawMode = typeof record.mode === 'string' ? record.mode.toLowerCase() : '';
+  const mode = rawMode === 'audio' ? 'audio' : 'video';
+      modeBadge.textContent = mode === 'audio' ? 'Audio Session' : 'Video Session';
+      modeBadge.classList.toggle('accent', mode === 'audio');
+
+      const format = typeof record.format === 'string' && record.format.trim() ? record.format.trim() : 'unknown';
+      formatBadge.textContent = mode === 'audio' ? format.toUpperCase() : `${format.toUpperCase()} Container`;
+
+      createdBadge.textContent = isValidDate ? `Stored ${candidateDate.toLocaleDateString()}` : 'Stored —';
+      if (resolutionBadge) {
+        const resolution = getResolutionLabel({ ...record, mode });
+        if (mode === 'video' && resolution) {
+          resolutionBadge.textContent = resolution;
+          resolutionBadge.style.display = '';
+        } else if (mode === 'video') {
+          resolutionBadge.textContent = 'N/A';
+          resolutionBadge.style.display = '';
+        } else {
+          resolutionBadge.style.display = 'none';
+        }
+      }
+    }
+
+    async function bootstrap() {
+      if (!downloadId) {
+        showError('Missing download identifier. Return to the library and select a file again.');
+        return;
+      }
+
+      const meResponse = await fetch('/api/me');
+      const me = await meResponse.json();
+      if (!me.isAuthenticated) {
+        window.location.href = '/login';
+        return;
+      }
+
+      try {
+        const metaResponse = await fetch(`/api/downloads/${encodeURIComponent(downloadId)}/meta`);
+        if (!metaResponse.ok) {
+          throw new Error('Unable to load media metadata.');
+        }
+        const payload = await metaResponse.json();
+        metadata = payload.download;
+        renderMeta(metadata);
+        configureMedia(metadata);
+        bindControls();
+      } catch (error) {
+        console.error(error);
+        showError('We could not prepare this media. It may have been deleted.');
+      }
+    }
+
+    backButton.addEventListener('click', () => {
+      window.location.href = '/downloads';
+    });
+
+    logoutButton.addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login';
+    });
+
+    updateFullscreenButton();
+    if (volumeRange) {
+      setVolumeUI(volumeRange.value);
+    }
+    updateMuteButton();
+    updatePitchLockButton();
+    setCustomEqVisibility(eqPresetSelect ? eqPresetSelect.value : 'off');
+    updateSpeedLabel(1);
+    updateReverbLabel(currentReverbMix);
+    resetPresetForm();
+    renderPresetLists();
+
+    bootstrap().catch((error) => {
+      console.error(error);
+      showError('Unexpected error while loading the player.');
+    });
+  </script>
+</body>
+</html>
